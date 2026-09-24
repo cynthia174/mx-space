@@ -15,9 +15,14 @@ const {
   dashboard: { repo, version },
 } = require('./package.json')
 
-const url = `https://github.com/${repo}/releases/latest/download/release.zip`
+// Keep the bundled dashboard compatible with this Core release.
+const url = `https://github.com/${repo}/releases/download/v${version}/release.zip`
 ;(async () => {
-  const buffer = await fetch(url).then((res) => res.arrayBuffer())
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Dashboard download failed: HTTP ${response.status} (${url})`)
+  }
+  const buffer = await response.arrayBuffer()
   const zipPath = join(process.cwd(), 'admin-release.zip')
   appendFileSync(zipPath, Buffer.from(buffer))
 

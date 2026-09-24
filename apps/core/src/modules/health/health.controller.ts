@@ -19,6 +19,15 @@ export class HealthController {
     return 'OK'
   }
 
+  @Get('/source')
+  @HTTPDecorators.Bypass
+  source() {
+    return {
+      version: '10.5.3',
+      commit: process.env.MX_SOURCE_COMMIT || 'unknown',
+    }
+  }
+
   @Get('/email/test')
   @Auth()
   async testEmail() {

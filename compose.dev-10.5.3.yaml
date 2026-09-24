@@ -1,0 +1,71 @@
+name: mxcoredev1053
+
+services:
+  core:
+    image: cynthia174/mx-server:10.5.3-dev
+    pull_policy: never
+    container_name: mxcore-dev1053-core
+    restart: unless-stopped
+    env_file: .env.dev-10.5.3
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      DB_HOST: mongo-dev
+      COLLECTION_NAME: mx-space-dev1053
+      REDIS_HOST: redis-dev
+      ALLOWED_ORIGINS: localhost:*,http://localhost:2334,http://127.0.0.1:2334
+      BETTER_AUTH_URL: http://localhost:2334
+    ports:
+      - 127.0.0.1:2334:2333
+    volumes:
+      - core-data:/root/.mx-space
+    depends_on:
+      mongo-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - isolated
+    healthcheck:
+      test: [CMD, curl, -f, http://127.0.0.1:2333/api/v2/ping]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  mongo-dev:
+    image: mongo:7
+    container_name: mxcore-dev1053-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - isolated
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: mxcore-dev1053-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - isolated
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  isolated:
+    name: mxcore-dev1053-isolated
+
+volumes:
+  core-data:
+  mongo-data:
+  redis-data:
