@@ -5,6 +5,23 @@ This repository's `dev-10.5.3` branch starts at the official `v10.5.3` tag
 served the site on port 2333 advertises that same revision. Keep `master` and
 the Shiro repository separate.
 
+## Repository roles and dashboard source
+
+- `cynthia174/shiro` serves the visitor-facing website on its own deployment.
+- `cynthia174/mx-admin` contains the dashboard UI. Its `dev-6.4.0` branch is
+  based on the upstream `mx-space/mx-admin` v6.4.0 tag.
+- `cynthia174/mx-space` contains Core, its API and the dashboard asset proxy.
+  The local `dev-10.5.3` branch builds the dashboard from the exact Admin Git
+  commit in `apps/core/mx-admin.lock.json`.
+
+The Docker build uses a BuildKit Git context for that commit, builds Admin with
+its frozen pnpm lockfile, and copies its `dist` into the Core image. Change the
+lock only after pushing the intended Admin commit to `cynthia174/mx-admin`.
+This avoids a manual asset copy after rebuilding Core. The `dashboard.repo`
+field in `apps/core/package.json` also points to the fork so the runtime
+updater does not fetch the upstream dashboard; the fork does not yet publish a
+release, so use the pinned Docker build for dashboard updates.
+
 ## Test stack
 
 `compose.dev-10.5.3.yaml` uses port `127.0.0.1:2334`, its own Docker network,
@@ -23,8 +40,7 @@ machine they are stored in `$env:LOCALAPPDATA\ShiroCoreDev1053\test-admin.json`.
 From the repository root in PowerShell:
 
 ```powershell
-$revision = git rev-parse HEAD
-docker build --file dockerfile --tag cynthia174/mx-server:10.5.3-dev --build-arg SOURCE_COMMIT=$revision .
+./scripts/build-dev-10.5.3.ps1
 docker compose -f compose.dev-10.5.3.yaml config --quiet
 docker compose -f compose.dev-10.5.3.yaml up -d --no-build
 docker compose -f compose.dev-10.5.3.yaml ps
@@ -34,20 +50,30 @@ After changing Core source, rebuild with the same image tag and recreate only
 the test Core container:
 
 ```powershell
-$revision = git rev-parse HEAD
-docker build --file dockerfile --tag cynthia174/mx-server:10.5.3-dev --build-arg SOURCE_COMMIT=$revision .
+./scripts/build-dev-10.5.3.ps1
 docker compose -f compose.dev-10.5.3.yaml up -d --no-deps --force-recreate --no-build core
 docker inspect mxcore-dev1053-core --format '{{.Image}}'
 docker image inspect cynthia174/mx-server:10.5.3-dev --format '{{.Id}}'
+docker image inspect cynthia174/mx-server:10.5.3-dev --format '{{index .Config.Labels "org.opencontainers.image.mx-admin.revision"}}'
 curl.exe http://127.0.0.1:2334/api/v2/health/source
 docker compose -f compose.dev-10.5.3.yaml logs --tail 100 core
 ```
 
-The source endpoint reports the Git commit passed at build time. If the
-working tree has uncommitted edits, the commit alone does not identify those
-edits; also compare the image ID and the endpoint behavior. The Dockerfile
-downloads the dashboard release declared by `apps/core/package.json` rather
-than the changing latest release. The 10.5.3 source declares mx-admin 6.4.0.
+The script builds Core from a clean checkout of its Git HEAD plus the three
+explicit build-chain files, so an unrelated working-tree change (such as a
+local `pnpm-lock.yaml` edit) cannot enter this image. While these build-chain
+files differ from HEAD, the image's Core revision label ends in
+`-working-tree`; after committing, rebuild to label the exact Core commit.
+The Admin revision label always records the pinned SHA. For a local Admin
+commit that has not yet been pushed, use
+`./scripts/build-dev-10.5.3.ps1 -UseLocalAdminSource` for a preliminary build;
+the normal command verifies that the remote fork contains the commit.
+
+Core serves `/root/.mx-space/admin` from its persistent volume ahead of the
+image's `/app/admin`. If an older manually copied dashboard exists in the
+volume, back up and rename that specific directory before checking a new
+image. Keep the backup until the dashboard has been verified after container
+restart and recreation.
 
 Test URLs:
 
