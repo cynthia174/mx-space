@@ -268,6 +268,11 @@ export class PostService implements OnApplicationBootstrap {
 
     const { draftId } = data
 
+    // An empty slug on an existing post means keeping its current path.
+    if (data.slug === '') {
+      delete data.slug
+    }
+
     // 看看 category 改了没
     const { categoryId } = data
     if (categoryId && categoryId !== oldDocument.categoryId) {
@@ -285,12 +290,14 @@ export class PostService implements OnApplicationBootstrap {
       data.modified = now
     }
 
-    if (data.slug && data.slug !== oldDocument.slug) {
+    if (data.slug) {
       data.slug = slugify(data.slug)
-      const isAvailableSlug = await this.isAvailableSlug(data.slug)
+      if (data.slug !== oldDocument.slug) {
+        const isAvailableSlug = await this.isAvailableSlug(data.slug)
 
-      if (!isAvailableSlug) {
-        throw new BusinessException(ErrorCodeEnum.SlugNotAvailable)
+        if (!isAvailableSlug) {
+          throw new BusinessException(ErrorCodeEnum.SlugNotAvailable)
+        }
       }
     }
 

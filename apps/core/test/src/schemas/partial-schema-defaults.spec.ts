@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { PartialNoteSchema } from '~/modules/note/note.schema'
 import { PartialPageSchema } from '~/modules/page/page.schema'
-import { PartialPostSchema } from '~/modules/post/post.schema'
+import { PartialPostSchema, PostSchema } from '~/modules/post/post.schema'
 
 const DEFAULT_LEAK_FIELDS = [
   'title',
@@ -22,6 +22,15 @@ function getLeakedDefaults(schema: any, input: Record<string, any>) {
 }
 
 describe('Partial schemas should not apply defaults for missing fields', () => {
+  it('PostSchema accepts an empty slug for title-based generation', () => {
+    const result = PostSchema.parse({
+      title: 'Empty Slug Test',
+      text: 'Test content',
+      slug: '',
+      categoryId: '507f1f77bcf86cd799439011',
+    })
+    expect(result.slug).toBe('')
+  })
   it('PartialNoteSchema - only topicId', () => {
     const leaked = getLeakedDefaults(PartialNoteSchema, {
       topicId: '507f1f77bcf86cd799439011',

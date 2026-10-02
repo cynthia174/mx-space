@@ -385,6 +385,17 @@ describe('PostService', () => {
       expect(result.slug).toBe('Auto-Generate-Slug')
     })
 
+    it('should auto-generate slug from title when provided slug is empty', async () => {
+      const result = await postService.create({
+        title: 'Empty Slug Test',
+        text: 'Test content',
+        slug: '',
+        categoryId: 'valid-category-id',
+      } as PostModel)
+
+      expect(result.slug).toBe('Empty-Slug-Test')
+    })
+
     it('should slugify provided slug', async () => {
       const postData = {
         title: 'Test Post',
@@ -604,6 +615,22 @@ describe('PostService', () => {
         ArticleTypeEnum.Post,
         'post-1',
       )
+    })
+
+    it('should preserve the existing slug when update supplies an empty slug', async () => {
+      const result = await postService.updateById('post-1', { slug: '' })
+
+      expect(result.slug).toBe('original-slug')
+      expect(mockSlugTrackerService.createTracker).not.toHaveBeenCalled()
+    })
+
+    it('should accept an update slug that normalizes to the current slug', async () => {
+      const result = await postService.updateById('post-1', {
+        slug: 'original slug',
+      })
+
+      expect(result.slug).toBe('original-slug')
+      expect(mockSlugTrackerService.createTracker).not.toHaveBeenCalled()
     })
 
     it('should update related posts bidirectionally', async () => {

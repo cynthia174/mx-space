@@ -6,7 +6,6 @@ import {
   zCoerceInt,
   zLang,
   zMongoId,
-  zNonEmptyString,
   zPinDate,
   zPrefer,
 } from '~/common/zod'
@@ -19,7 +18,7 @@ import { ContentFormat } from '~/shared/types/content-format.type'
  * Post schema for API validation
  */
 export const PostSchema = WriteBaseSchema.extend({
-  slug: zNonEmptyString,
+  slug: z.string(),
   summary: z
     .preprocess((val) => (val === '' ? null : val), z.string().nullable())
     .optional(),
